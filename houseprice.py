@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from sklearn.svm import SVR
 
 # pd.set_option("display.max_columns", None)
@@ -84,6 +85,18 @@ scaler = StandardScaler()
 scaler.fit(X_train)
 X_train = scaler.transform(X_train)
 X_test = scaler.transform(X_test)
+
+pca = PCA(n_components=100)
+pca.fit(X_train)
+X_train = pca.transform(X_train)
+X_test = pca.transform(X_test)
+
+# plot energy graph - want 95% preservation
+energy_graph = np.cumsum(pca.explained_variance_ratio_ * 100)
+plt.plot(energy_graph)
+plt.xlabel("Number of components (Dimensions)")
+plt.ylabel("Explained variance (%)")
+plt.show()
 
 model = SVR()
 model.fit(X_train, y_train)
