@@ -2,6 +2,13 @@ import sklearn
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder, LabelEncoder, OrdinalEncoder
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVR
 
 # pd.set_option("display.max_columns", None)
 
@@ -56,9 +63,35 @@ def cleanData(data):
 
     return new_data
 
-
 givenData = pd.read_csv(path+"train.csv")
 givenData= givenData.iloc[:, 1:]              # remove id
-prices = givenData["SalePrice"]
+y = givenData["SalePrice"]
+y /= 100000                 # scale prices so gradient doesn't get wrecked by loss
 givenData = givenData.drop("SalePrice", axis=1)
-cleanedData = cleanData(givenData)
+
+X = cleanData(givenData)
+
+# correlation matrix
+fig = plt.figure()
+sns.heatmap(X.iloc[:,:31].corr())
+plt.show()
+
+# 80-20 split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True)
+
+# standard normalization of data
+scaler = StandardScaler()
+scaler.fit(X_train)
+X_train = scaler.transform(X_train)
+X_test = scaler.transform(X_test)
+
+model = SVR()
+model.fit(X_train, y_train)
+
+preds = model.predict(X_test)
+
+print(preds)
+print(y_test)
+
+mse = mean_squared_error(preds, y_test)
+print(mse)
