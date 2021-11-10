@@ -10,6 +10,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.svm import SVR
+import pickle
 
 # pd.set_option("display.max_columns", None)
 
@@ -64,47 +65,50 @@ def cleanData(data):
 
     return new_data
 
-givenData = pd.read_csv(path+"train.csv")
-givenData= givenData.iloc[:, 1:]              # remove id
-y = givenData["SalePrice"]
-y /= 100000                 # scale prices so gradient doesn't get wrecked by loss
-givenData = givenData.drop("SalePrice", axis=1)
+if __name__ == '__main__':
+    givenData = pd.read_csv(path+"train.csv")
+    givenData= givenData.iloc[:, 1:]              # remove id
+    y = givenData["SalePrice"]
+    y /= 100000                 # scale prices so gradient doesn't get wrecked by loss
+    givenData = givenData.drop("SalePrice", axis=1)
 
-X = cleanData(givenData)
+    print(givenData.shape)
+    X = cleanData(givenData)
+    print(X.shape)
+    # correlation matrix
+    fig = plt.figure()
+    sns.heatmap(X.iloc[:,:31].corr())
+    plt.show()
 
-# correlation matrix
-fig = plt.figure()
-sns.heatmap(X.iloc[:,:31].corr())
-plt.show()
+    # 80-20 split
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True)
 
-# 80-20 split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=True)
+    # standard normalization of data
+    scaler = StandardScaler()
+    scaler.fit(X_train)
+    X_train = scaler.transform(X_train)
+    X_test = scaler.transform(X_test)
 
-# standard normalization of data
-scaler = StandardScaler()
-scaler.fit(X_train)
-X_train = scaler.transform(X_train)
-X_test = scaler.transform(X_test)
+    pca = PCA(n_components=100)
+    pca.fit(X_train)
+    X_train = pca.transform(X_train)
+    X_test = pca.transform(X_test)
 
-pca = PCA(n_components=100)
-pca.fit(X_train)
-X_train = pca.transform(X_train)
-X_test = pca.transform(X_test)
+    # plot energy graph - want 95% preservation
+    energy_graph = np.cumsum(pca.explained_variance_ratio_ * 100)
+    plt.plot(energy_graph)
+    plt.xlabel("Number of components (Dimensions)")
+    plt.ylabel("Explained variance (%)")
+    plt.show()
 
-# plot energy graph - want 95% preservation
-energy_graph = np.cumsum(pca.explained_variance_ratio_ * 100)
-plt.plot(energy_graph)
-plt.xlabel("Number of components (Dimensions)")
-plt.ylabel("Explained variance (%)")
-plt.show()
+    model = SVR(kernel="linear")
+    model.fit(X_train, y_train)
 
-model = SVR()
-model.fit(X_train, y_train)
+    preds = model.predict(X_test)
 
-preds = model.predict(X_test)
+    print(preds)
+    print(y_test)
 
-print(preds)
-print(y_test)
-
-mse = mean_squared_error(preds, y_test)
-print(mse)
+    mse = mean_squared_error(preds, y_test)
+    print(mse)
+    print(np.std(y_test))
